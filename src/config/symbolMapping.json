@@ -1,0 +1,65 @@
+{
+  "_comment": "Angel One symbol token mappings for common NSE stocks",
+  "_instructions": "Add more symbol mappings as needed. Format: 'SYMBOL': { 'token': 'ANGEL_TOKEN', 'exchange': 'NSE|NFO|BSE' }",
+  
+  "RELIANCE": {
+    "token": "3045",
+    "exchange": "NSE"
+  },
+  "TCS": {
+    "token": "3477",
+    "exchange": "NSE"
+  },
+  "INFY": {
+    "token": "1801",
+    "exchange": "NSE"
+  },
+  "WIPRO": {
+    "token": "3960",
+    "exchange": "NSE"
+  },
+  "HINDUNILVR": {
+    "token": "1701",
+    "exchange": "NSE"
+  },
+  "AXISBANK": {
+    "token": "1510",
+    "exchange": "NSE"
+  },
+  "ICICIBANK": {
+    "token": "1660",
+    "exchange": "NSE"
+  },
+  "HDFC": {
+    "token": "1599",
+    "exchange": "NSE"
+  },
+  "HDFCLIFE": {
+    "token": "1611",
+    "exchange": "NSE"
+  },
+  "BAJAJFINSV": {
+    "token": "1530",
+    "exchange": "NSE"
+  },
+  "MARUTI": {
+    "token": "1912",
+    "exchange": "NSE"
+  },
+  "LT": {
+    "token": "1850",
+    "exchange": "NSE"
+  },
+  "BHARTIARTL": {
+    "token": "1401",
+    "exchange": "NSE"
+  },
+  "ITC": {
+    "token": "1675",
+    "exchange": "NSE"
+  },
+  "HCLTECH": {
+    "token": "1594",
+    "exchange": "NSE"
+  }
+}

@@ -1,0 +1,33 @@
+{
+  "name": "algo",
+  "version": "1.0.0",
+  "description": "",
+  "type": "module",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js",
+    "test": "node --test test/*.test.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@sparticuz/chromium": "^147.0.0",
+    "axios": "^1.17.0",
+    "better-sqlite3": "^13.0.3",
+    "binary-parser": "^2.3.0",
+    "cors": "^2.8.6",
+    "csv-parser": "^3.2.1",
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1",
+    "kiteconnect": "^5.3.0",
+    "node-cron": "^4.2.1",
+    "otplib": "^12.0.1",
+    "puppeteer-core": "^25.1.0",
+    "redis": "^6.0.0",
+    "smartapi-javascript": "^1.0.27",
+    "socket.io": "^4.8.3",
+    "ws": "^8.21.0"
+  }
+}

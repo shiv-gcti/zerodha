@@ -1,0 +1,1880 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Webhook Payload Builder</title>
+  <style>
+    :root{
+      color-scheme: dark;
+      --bg:#090909;
+      --bg-soft:#101010;
+      --panel:#141414;
+      --panel2:#1b1b1b;
+      --text:#f2f2f2;
+      --muted:#a8a8a8;
+      --line:#303030;
+      --line-strong:#3f3f3f;
+      --primary:#14b87a;
+      --primary-hover:#21d092;
+      --primary-text:#03130d;
+      --danger:#ef4444;
+      --danger-hover:#f87171;
+      --input:#0f0f0f;
+      --chip:#202020;
+      --focus:rgba(20,184,122,.24);
+      --shadow: 0 18px 50px rgba(0,0,0,.42);
+    }
+
+    * { box-sizing: border-box; }
+
+    html { min-width: 0; }
+
+    body {
+      min-height: 100vh;
+      margin: 0;
+      padding: 24px 24px 96px;
+      color: var(--text);
+      background:
+        linear-gradient(180deg, #161616 0%, var(--bg) 42%, #050505 100%);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, Helvetica, sans-serif;
+      line-height: 1.45;
+    }
+
+    h1 { margin: 0 0 16px; font-size: 22px; line-height: 1.15; letter-spacing: 0; }
+
+    .hint { font-size: 12px; color: var(--muted); line-height: 1.35; }
+
+    .app-shell {
+      width: min(1120px, 100%);
+      margin: 0 auto;
+    }
+
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+
+    .grid { display: grid; grid-template-columns: repeat(2, minmax(240px, 1fr)); gap: 12px; }
+
+
+    label { display: block; font-size: 13px; color: var(--muted); margin-bottom: 6px; }
+
+    input, select {
+      width: 100%;
+      min-height: 44px;
+      padding: 11px 12px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--input);
+      color: var(--text);
+      outline: none;
+      font: inherit;
+    }
+
+    input:focus, select:focus, textarea:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 4px var(--focus);
+    }
+
+    input::placeholder{ color:#727272; }
+
+    .row { margin-top: 14px; }
+
+    textarea { width: 100%; min-height: 190px; padding: 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--input);
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: 12.5px; color: var(--text);
+      outline: none;
+      resize: vertical;
+    }
+
+    button {
+      min-height: 44px;
+      padding: 11px 16px;
+      border: 0;
+      border-radius: 8px;
+      cursor: pointer;
+      font: inherit;
+      font-weight: 800;
+      box-shadow: var(--shadow);
+      transition: background .18s ease, border-color .18s ease, transform .18s ease;
+    }
+
+    button:hover { transform: translateY(-1px); }
+    button:active { transform: translateY(0); }
+    .primary { background: var(--primary); color: var(--primary-text); }
+    .primary:hover { background: var(--primary-hover); }
+    .danger { background: var(--danger); color: #fff; }
+    .danger:hover { background: var(--danger-hover); }
+    .secondary { background: #1a1a1a; color: var(--text); border: 1px solid var(--line-strong); box-shadow:none; }
+    .secondary:hover { background: #232323; border-color: #555; }
+
+    .actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 10px; }
+
+    .pill { display: inline-block; padding: 2px 8px; border: 1px solid var(--line); border-radius: 999px; font-size: 12px; color: var(--text); background: var(--chip); }
+
+    .panel{
+      width: 100%;
+      background: linear-gradient(180deg, rgba(24,24,24,.96), rgba(14,14,14,.96));
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 18px;
+      box-shadow: var(--shadow);
+    }
+
+    .status { margin-top: 10px; font-size: 13px; color: var(--muted); }
+
+    pre { background: #070707; color: var(--text); padding: 12px; border-radius: 8px; overflow: auto; }
+
+    /* Autocomplete */
+    .autocomplete-wrap { position: relative; }
+    .autocomplete-list {
+      position: absolute;
+      z-index: 50;
+      left: 0;
+      right: 0;
+      margin-top: 6px;
+      background: var(--bg-soft);
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      max-height: 260px;
+      overflow: auto;
+      box-shadow: var(--shadow);
+      display: none;
+    }
+    .autocomplete-list.show { display: block; }
+    .autocomplete-item {
+      padding: 10px 12px;
+      cursor: pointer;
+      border-bottom: 1px solid var(--line);
+    }
+    .autocomplete-item:last-child{ border-bottom:0; }
+    .autocomplete-item:hover{ background: #202020; }
+    .autocomplete-item .main{ font-weight: 800; color: var(--text); }
+    .autocomplete-item .sub{ font-size: 12px; color: var(--muted); margin-top: 2px; }
+
+    .topbar{ display:flex; gap:12px; flex-wrap:wrap; margin-bottom: 12px; }
+    .field-flex { min-width: 240px; flex: 1; }
+    .two-up { grid-template-columns: 1fr 1fr; gap: 12px; }
+    .dashboard-header { display: flex; justify-content: space-between; gap: 12px; align-items: center; margin-bottom: 16px; }
+    .dashboard-title { margin: 0; font-size: 22px; line-height: 1.15; }
+    .dashboard-subtitle { margin: 6px 0 0; color: var(--muted); font-size: 13px; }
+    .dashboard-header-actions { display: flex; gap: 8px; align-items: center; }
+    .dashboard-login-btn { min-width: 92px; text-transform: lowercase; }
+    .dashboard-auto-token-btn { width: 44px; min-width: 44px; padding: 0; font-size: 18px; line-height: 1; }
+    .dashboard-token-status {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      min-height: 28px;
+      padding: 4px 8px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: var(--chip);
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: .02em;
+      white-space: nowrap;
+      text-transform: uppercase;
+    }
+    .dashboard-token-status::before,
+    .dashboard-live-status::before {
+      content: "";
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #f59e0b;
+      box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.18);
+      display: inline-block;
+      flex-shrink: 0;
+    }
+    .dashboard-token-status.present,
+    .dashboard-live-status.live {
+      color: #d8ffe9;
+      border-color: rgba(20,184,122,.55);
+      background: rgba(20,184,122,.12);
+    }
+    .dashboard-token-status.present::before,
+    .dashboard-live-status.live::before {
+      background: #22c55e;
+      box-shadow: 0 0 0 2px rgba(34, 197, 94, 0.18);
+    }
+    .dashboard-token-status.missing,
+    .dashboard-live-status.offline {
+      color: #ffdede;
+      border-color: rgba(239,68,68,.5);
+      background: rgba(239,68,68,.12);
+    }
+    .dashboard-token-status.missing::before,
+    .dashboard-live-status.offline::before {
+      background: #ef4444;
+      box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.18);
+    }
+    .dashboard-live-status {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      min-height: 28px;
+      padding: 4px 8px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: var(--chip);
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: .02em;
+      white-space: nowrap;
+      text-transform: uppercase;
+    }
+    .metric-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+    .dashboard-controls {
+      display: grid;
+      grid-template-columns: minmax(0, 1.15fr) minmax(220px, .75fr) minmax(180px, .6fr);
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+    .metric-card {
+      min-height: 112px;
+      padding: 14px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #101010;
+    }
+    .metric-card.clickable {
+      cursor: pointer;
+      transition: border-color .18s ease, background .18s ease, transform .18s ease;
+    }
+    .metric-card.clickable:hover {
+      background: #151515;
+      border-color: var(--primary);
+      transform: translateY(-1px);
+    }
+    .metric-label { color: var(--muted); font-size: 12px; }
+    .metric-value { margin-top: 12px; font-size: 28px; font-weight: 900; line-height: 1; }
+    .metric-note { margin-top: 10px; color: var(--muted); font-size: 12px; }
+    .metric-value.pnl-positive { color: var(--primary-hover); }
+    .metric-value.pnl-negative { color: var(--danger-hover); }
+    .account-filter-card {
+      min-height: 112px;
+      padding: 14px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #101010;
+    }
+    .trading-switch-card {
+      display: flex;
+      min-height: 112px;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+    .switch-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 14px; }
+    .switch-state { font-size: 24px; font-weight: 900; line-height: 1; }
+    .switch {
+      position: relative;
+      display: inline-flex;
+      width: 70px;
+      height: 38px;
+      flex: 0 0 auto;
+    }
+    .switch input {
+      width: 1px;
+      height: 1px;
+      opacity: 0;
+      position: absolute;
+    }
+    .switch-slider {
+      position: absolute;
+      inset: 0;
+      border: 1px solid var(--line-strong);
+      border-radius: 999px;
+      background: #2a2a2a;
+      cursor: pointer;
+      transition: background .18s ease, border-color .18s ease;
+    }
+    .switch-slider::before {
+      content: "";
+      position: absolute;
+      width: 28px;
+      height: 28px;
+      top: 4px;
+      left: 4px;
+      border-radius: 50%;
+      background: #f2f2f2;
+      transition: transform .18s ease;
+    }
+    .switch input:checked + .switch-slider {
+      background: var(--primary);
+      border-color: var(--primary-hover);
+    }
+    .switch input:checked + .switch-slider::before { transform: translateX(32px); background: var(--primary-text); }
+    .switch input:focus + .switch-slider { box-shadow: 0 0 0 4px var(--focus); }
+    .switch input:disabled + .switch-slider { cursor: not-allowed; opacity: .62; }
+    .dashboard-placeholder {
+      margin-top: 12px;
+      padding: 14px;
+      border: 1px dashed var(--line-strong);
+      border-radius: 8px;
+      background: rgba(255,255,255,.02);
+      color: var(--muted);
+      font-size: 13px;
+    }
+    .manual-exit-alerts {
+      display: none;
+      margin: 12px 0;
+      border: 1px solid #ff6262;
+      border-radius: 8px;
+      background: rgba(255, 52, 52, .12);
+      color: #ffdede;
+      overflow: hidden;
+    }
+    .manual-exit-alerts.show {
+      display: block;
+      animation: manualExitBlink 1s ease-in-out infinite;
+    }
+    .manual-exit-header {
+      padding: 12px 14px;
+      border-bottom: 1px solid rgba(255, 98, 98, .45);
+      font-weight: 900;
+      color: #fff;
+    }
+    .manual-exit-list { display: grid; gap: 1px; background: rgba(255, 98, 98, .2); }
+    .manual-exit-item {
+      padding: 12px 14px;
+      background: rgba(16, 16, 16, .92);
+      font-size: 13px;
+      line-height: 1.45;
+    }
+    .manual-exit-main { font-weight: 900; color: #fff; }
+    .manual-exit-sub { margin-top: 4px; color: #ffdede; }
+    @keyframes manualExitBlink {
+      0%, 100% { box-shadow: 0 0 0 rgba(255, 98, 98, 0); border-color: #ff6262; }
+      50% { box-shadow: 0 0 22px rgba(255, 98, 98, .45); border-color: #fff; }
+    }
+    .bottom-tabs {
+      position: fixed;
+      left: 50%;
+      bottom: 16px;
+      z-index: 100;
+      display: grid;
+      grid-template-columns: repeat(2, minmax(120px, 1fr));
+      gap: 8px;
+      width: min(420px, calc(100% - 24px));
+      padding: 8px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: rgba(14,14,14,.94);
+      box-shadow: var(--shadow);
+      transform: translateX(-50%);
+      backdrop-filter: blur(14px);
+    }
+    .tab-button {
+      min-height: 46px;
+      padding: 10px 12px;
+      border: 1px solid transparent;
+      border-radius: 8px;
+      background: transparent;
+      color: var(--muted);
+      box-shadow: none;
+    }
+    .tab-button:hover { background: #1d1d1d; transform: none; }
+    .tab-button.active {
+      background: var(--primary);
+      color: var(--primary-text);
+      border-color: var(--primary-hover);
+    }
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      z-index: 200;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 18px;
+      background: rgba(0,0,0,.72);
+    }
+    .modal-backdrop.show { display: flex; }
+    .modal {
+      width: min(880px, 100%);
+      max-height: min(760px, calc(100vh - 36px));
+      overflow: hidden;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: #101010;
+      box-shadow: var(--shadow);
+    }
+    .modal-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 16px;
+      border-bottom: 1px solid var(--line);
+    }
+    .modal-title { margin: 0; font-size: 18px; line-height: 1.2; }
+    .modal-subtitle { margin: 4px 0 0; color: var(--muted); font-size: 12px; }
+    .modal-close {
+      width: auto;
+      min-height: 38px;
+      padding: 8px 12px;
+      box-shadow: none;
+      background: #1a1a1a;
+      color: var(--text);
+      border: 1px solid var(--line-strong);
+    }
+    .modal-body {
+      max-height: calc(100vh - 150px);
+      overflow: auto;
+      padding: 0;
+    }
+    .token-login-body {
+      padding: 16px;
+    }
+    .token-login-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+      padding: 0 16px 16px;
+    }
+    .detail-table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 760px;
+    }
+    .detail-table th,
+    .detail-table td {
+      padding: 12px;
+      border-bottom: 1px solid var(--line);
+      text-align: left;
+      font-size: 13px;
+      white-space: nowrap;
+    }
+    .detail-table th {
+      position: sticky;
+      top: 0;
+      z-index: 1;
+      background: #151515;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 800;
+    }
+    .empty-state {
+      padding: 22px 16px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    @media (max-width: 720px) {
+      body { padding: 14px 14px 92px; }
+      .panel { padding: 14px; border-radius: 10px; }
+      .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+      .topbar { gap: 10px; }
+      .field-flex { min-width: min(100%, 220px); }
+      textarea { min-height: 160px; }
+      h1 { font-size: 19px; }
+      .metric-grid { grid-template-columns: 1fr; }
+      .dashboard-controls { grid-template-columns: 1fr; }
+      .dashboard-header { align-items: flex-start; }
+      .dashboard-badge { display: inline-block; margin-top: 12px; }
+      .switch-row { align-items: flex-start; }
+    }
+
+    @media (max-width: 560px) {
+      body { padding: 10px 10px 90px; }
+      .panel { padding: 12px; }
+      .grid, .two-up { grid-template-columns: 1fr; }
+      .topbar { display: grid; grid-template-columns: 1fr; }
+      .field-flex { min-width: 0; }
+      .actions { display: grid; grid-template-columns: 1fr; }
+      button { width: 100%; }
+      .token-login-actions { display: grid; grid-template-columns: 1fr; }
+      textarea { min-height: 180px; font-size: 12px; }
+      .bottom-tabs {
+        bottom: 10px;
+        width: calc(100% - 20px);
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+      .modal-backdrop { padding: 10px; align-items: center; }
+      .modal { max-height: calc(100vh - 20px); border-radius: 10px; }
+      .modal-header { padding: 12px; }
+      .modal-body { max-height: calc(100vh - 110px); }
+      .detail-table { min-width: 760px; }
+      .switch { width: 66px; }
+      .switch input:checked + .switch-slider::before { transform: translateX(28px); }
+    }
+  </style>
+</head>
+<body>
+  <main class="app-shell">
+  <section class="tab-panel active" id="dashboardTab" data-tab-panel="dashboard">
+  <div class="panel">
+    <div class="dashboard-header">
+      <div>
+        <h1 class="dashboard-title">Dashboard</h1>
+      </div>
+      <div class="dashboard-header-actions">
+        <button class="secondary dashboard-auto-token-btn" id="autoTokenLoginBtn" type="button" title="Generate tokens automatically for all accounts">A</button>
+        <div style="display:flex; align-items:center; gap:8px;">
+          <button class="secondary dashboard-login-btn" id="shivTokenBtn" type="button" title="Generate SHIV token now">SHIV</button>
+          <span id="shivTokenStatusBadge" class="dashboard-token-status" aria-live="polite">checking</span>
+        </div>
+        <span id="angelConnectionBadge" class="dashboard-live-status" aria-live="polite">checking</span>
+        <button class="primary dashboard-login-btn" id="manualTokenLoginBtn" type="button">login</button>
+      </div>
+    </div>
+
+    <div class="dashboard-controls">
+      <div class="metric-card trading-switch-card">
+        <div>
+          <div class="metric-label">TradingView to Broker</div>
+          <div class="switch-row">
+            <div class="switch-state" id="tradingSwitchState">OFF</div>
+            <label class="switch" for="tradingEnabled">
+              <input id="tradingEnabled" type="checkbox" />
+              <span class="switch-slider"></span>
+            </label>
+          </div>
+        </div>
+        <div class="metric-note" id="tradingSwitchNote">Signals are blocked until you turn this ON.</div>
+      </div>
+
+      <div class="account-filter-card">
+        <label for="dashboardAccount">Account ID</label>
+        <select id="dashboardAccount">
+          <option value="ALL">ALL</option>
+        </select>
+        <div class="metric-note" id="dashboardFilterNote">Dashboard totals use the selected account.</div>
+      </div>
+<div class="metric-card">
+    <div style="
+        display:flex;
+        justify-content:space-between;
+        align-items:center;
+    ">
+
+        <div class="metric-label">
+            PnL
+        </div>
+
+        <button
+            id="refreshLtpBtn"
+            title="Refresh LTP"
+            style="
+                min-height:auto;
+                padding:4px 8px;
+                font-size:16px;
+                border:none;
+                background:transparent;
+                color:white;
+                cursor:pointer;
+                box-shadow:none;
+            "
+        >
+            🔄
+        </button>
+
+    </div>
+
+    <div
+        class="metric-value"
+        id="dashboardPnlValue"
+    >
+        0.00
+    </div>
+
+    <div
+        class="metric-note"
+        id="dashboardPnlNote"
+    >
+        Open positions PnL for selected account.
+    </div>
+</div>
+
+    <div class="manual-exit-alerts" id="manualExitAlerts" role="alert" aria-live="assertive">
+      <div class="manual-exit-header">Automatic exit order failed. Please exit manually.</div>
+      <div class="manual-exit-list" id="manualExitList"></div>
+    </div>
+
+    <div class="metric-grid">
+      <div class="metric-card clickable" id="ordersTodayCard" role="button" tabindex="0">
+        <div class="metric-label">Orders Today</div>
+        <div class="metric-value" id="ordersTodayValue">0</div>
+        <div class="metric-note" id="ordersTodayNote">Signals counted from today's order flow.</div>
+      </div>
+      <div class="metric-card clickable" id="openPositionsCard" role="button" tabindex="0">
+        <div class="metric-label">Open Positions</div>
+        <div class="metric-value" id="openPositionsValue">0</div>
+        <div class="metric-note" id="openPositionsNote">Broker open positions for selected account.</div>
+      </div>
+    </div>
+  </div>
+  </section>
+
+  <section class="tab-panel" id="payloadTab" data-tab-panel="payload">
+  <div class="panel">
+    <h1>Webhook Payload Builder (Zerodha/Algo backend)</h1>
+
+
+
+
+
+
+    <div class="topbar">
+      <div class="field-flex">
+        <label for="instrument_type">Instrument type (fast filter)</label>
+        <select id="instrument_type">
+          <option value="">ALL</option>
+          <option value="EQ">EQ</option>
+          <option value="CE">CE</option>
+          <option value="PE">PE</option>
+          <option value="FUT">FUT</option>
+          <option value="OPT">OPT</option>
+        </select>
+        <div class="hint">Used for autocomplete lookup from your <b>public.zerodha_instruments</b> table.</div>
+      </div>
+
+      <div class="field-flex">
+        <label for="AC">AC (account)</label>
+        <select id="AC">
+          <option value="">Loading accounts...</option>
+        </select>
+      </div>
+
+      <div class="field-flex">
+        <label for="TT">TT (transaction type)</label>
+        <select id="TT">
+          <option value="BUY">BUY</option>
+          <option value="SELL">SELL</option>
+        </select>
+      </div>
+
+      <div class="field-flex">
+        <label for="E">E (exchange)</label>
+        <select id="E">
+          <option value="NSE">NSE</option>
+          <option value="BSE">BSE</option>
+          <option value="NFO">NFO</option>
+          <option value="BFO">BFO</option>
+          <option value="CDS">CDS</option>
+          <option value="MCX">MCX</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="row grid" style="margin-top:8px;">
+      <div>
+        <label for="TS">TS (tradingsymbol) — type to search</label>
+        <div class="autocomplete-wrap">
+          <input id="TS" value="" placeholder="Start typing (example: RELIANCE, RAMRAT, ... )" autocomplete="off" />
+          <div id="tsList" class="autocomplete-list"></div>
+        </div>
+        <div class="hint">Selection sets TS automatically from the local instrument lookup endpoint: <b>/instruments/search</b>.</div>
+      </div>
+
+      <div>
+        <label for="Q">Q (lots)</label>
+        <input id="Q" type="number" step="1" value="1" />
+      </div>
+
+      <div>
+        <label for="OT">OT (order type)</label>
+        <select id="OT">
+          <option value="LIMIT">LIMIT</option>
+          <option value="MARKET">MARKET</option>
+        </select>
+      </div>
+
+      <div>
+        <label for="P">P (product)</label>
+        <select id="P">
+          <option value="CNC">CNC</option>
+          <option value="NRML">NRML</option>
+        </select>
+      </div>
+
+      <div>
+        <label for="VL">VL (validity)</label>
+        <select id="VL">
+          <option value="DAY">DAY</option>
+          <option value="IOC">IOC</option>
+        </select>
+      </div>
+
+      <div>
+        <label for="PR">PR (price)</label>
+        <input id="PR" type="number" step="0.01" placeholder="400 (for LIMIT orders)" />
+      </div>
+
+      <div style="grid-column: 1 / -1;">
+        <label for="TP">Optional fields (TP/SL)</label>
+        <div class="grid two-up">
+          <div>
+            <label for="TP" style="margin-top:0;">TP (target points)</label>
+            <input id="TP" type="number" step="0.01" placeholder="e.g. 10" />
+          </div>
+          <div>
+            <label for="SL" style="margin-top:0;">SL (stop loss points)</label>
+            <input id="SL" type="number" step="0.01" placeholder="e.g. 5" />
+          </div>
+        </div>
+        <div class="hint">Leave blank to omit TP/SL from the payload.</div>
+      </div>
+
+    </div>
+
+    <div class="actions">
+      <button class="primary" id="buildBtn">Build Payload</button>
+      <button class="secondary" id="copyBtn" type="button">Copy JSON</button>
+      <button class="secondary" id="clearBtn" type="button">Clear</button>
+    </div>
+
+    <div class="row" style="margin-top:12px;">
+      <label for="payloadOut">Payload JSON</label>
+      <textarea id="payloadOut" readonly></textarea>
+    </div>
+
+    <div class="row">
+      <button class="secondary" type="button" id="toggleWebhookBtn" style="display:flex; align-items:center; gap:10px;">
+        <span id="webhookTriangle" style="font-size:14px; width:16px; display:inline-block;">▶</span>
+        <span>Webhook URL (optional)</span>
+      </button>
+
+      <div id="webhookBox" style="display:none; margin-top:10px;">
+        <label for="webhookUrl">Webhook URL</label>
+        <input id="webhookUrl" value="http://localhost:3000/webhook" />
+        <div class="hint">If you fill this and click Send, it will POST the payload to your server.</div>
+
+        <div class="actions" style="margin-top:10px;">
+          <button class="primary" id="sendBtn" type="button">Send to Webhook</button>
+          <button class="danger" id="abortBtn" type="button">Cancel Send</button>
+        </div>
+
+        <div class="status" id="status"></div>
+      </div>
+    </div>
+
+  </div>
+  </section>
+  </main>
+
+  <nav class="bottom-tabs" aria-label="Primary tabs">
+    <button class="tab-button active" type="button" data-tab="dashboard" aria-controls="dashboardTab" aria-selected="true">Dashboard</button>
+    <button class="tab-button" type="button" data-tab="payload" aria-controls="payloadTab" aria-selected="false">Payload</button>
+  </nav>
+
+  <div class="modal-backdrop" id="detailModalBackdrop" aria-hidden="true">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="detailModalTitle">
+      <div class="modal-header">
+        <div>
+          <h2 class="modal-title" id="detailModalTitle">Details</h2>
+          <div class="modal-subtitle" id="detailModalSubtitle">Today only</div>
+        </div>
+        <button class="modal-close" type="button" id="detailModalClose">Close</button>
+      </div>
+      <div class="modal-body" id="detailModalBody"></div>
+    </div>
+  </div>
+
+  <div class="modal-backdrop" id="tokenLoginModalBackdrop" aria-hidden="true">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="tokenLoginModalTitle">
+      <div class="modal-header">
+        <div>
+          <h2 class="modal-title" id="tokenLoginModalTitle">Generate Kite Token</h2>
+          <div class="modal-subtitle">Select the account for token generation.</div>
+        </div>
+        <button class="modal-close" type="button" id="tokenLoginModalClose">Close</button>
+      </div>
+      <div class="token-login-body">
+        <label for="tokenLoginAccount">Account ID</label>
+        <select id="tokenLoginAccount"></select>
+      </div>
+      <div class="token-login-actions">
+        <button class="secondary" type="button" id="tokenLoginCancel">Cancel</button>
+        <button class="primary" type="button" id="tokenLoginContinue">Continue</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    const $ = (id) => document.getElementById(id);
+
+    const tabButtons = document.querySelectorAll('[data-tab]');
+    const tabPanels = document.querySelectorAll('[data-tab-panel]');
+
+    function setActiveTab(tabName) {
+      tabPanels.forEach((panel) => {
+        panel.classList.toggle('active', panel.dataset.tabPanel === tabName);
+      });
+
+      tabButtons.forEach((button) => {
+        const isActive = button.dataset.tab === tabName;
+        button.classList.toggle('active', isActive);
+        button.setAttribute('aria-selected', String(isActive));
+      });
+    }
+
+    tabButtons.forEach((button) => {
+      button.addEventListener('click', () => setActiveTab(button.dataset.tab));
+    });
+
+    const tradingEnabledInput = $('tradingEnabled');
+    const tradingSwitchState = $('tradingSwitchState');
+    const tradingSwitchNote = $('tradingSwitchNote');
+    const dashboardAccount = $('dashboardAccount');
+    const dashboardFilterNote = $('dashboardFilterNote');
+    const ordersTodayValue = $('ordersTodayValue');
+    const ordersTodayNote = $('ordersTodayNote');
+    const openPositionsValue = $('openPositionsValue');
+    const openPositionsNote = $('openPositionsNote');
+    const dashboardPnlValue = $('dashboardPnlValue');
+    const dashboardPnlNote = $('dashboardPnlNote');
+    const manualTokenLoginBtn = $('manualTokenLoginBtn');
+    const autoTokenLoginBtn = $('autoTokenLoginBtn');
+    const shivTokenBtn = $('shivTokenBtn');
+    const shivTokenStatusBadge = $('shivTokenStatusBadge');
+    const angelConnectionBadge = $('angelConnectionBadge');
+    const ordersTodayCard = $('ordersTodayCard');
+    const openPositionsCard = $('openPositionsCard');
+    const detailModalBackdrop = $('detailModalBackdrop');
+    const detailModalTitle = $('detailModalTitle');
+    const detailModalSubtitle = $('detailModalSubtitle');
+    const detailModalBody = $('detailModalBody');
+    const detailModalClose = $('detailModalClose');
+    const tokenLoginModalBackdrop = $('tokenLoginModalBackdrop');
+    const tokenLoginAccount = $('tokenLoginAccount');
+    const tokenLoginModalClose = $('tokenLoginModalClose');
+    const tokenLoginCancel = $('tokenLoginCancel');
+    const tokenLoginContinue = $('tokenLoginContinue');
+    const manualExitAlerts = $('manualExitAlerts');
+    const manualExitList = $('manualExitList');
+    let selectedDashboardAccount = 'ALL';
+    let dashboardOrdersToday = 0;
+    let availableDashboardAccounts = [];
+    const manualExitAlertsByTradeId = new Map();
+
+    function summarizeTokenRun(summary) {
+      return Object.entries(summary || {})
+        .map(([accountId, result]) => {
+          if (result?.status === 'success') return `${accountId}: success`;
+          return `${accountId}: failed${result?.error ? ` (${result.error})` : ''}`;
+        })
+        .join('\n');
+    }
+
+    async function runAutomatedTokenGeneration() {
+      if (!autoTokenLoginBtn) return;
+
+      const confirmed = window.confirm('Generate Zerodha tokens automatically for all configured accounts?');
+      if (!confirmed) return;
+
+      const previousText = autoTokenLoginBtn.textContent;
+      autoTokenLoginBtn.disabled = true;
+      autoTokenLoginBtn.textContent = '...';
+
+      try {
+        const resp = await fetch('/zerodha/kite/auto-login-all', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' }
+        });
+        const data = await resp.json().catch(() => ({}));
+
+        if (!resp.ok && resp.status !== 207) {
+          throw new Error(data.message || 'Automated token generation failed.');
+        }
+
+        const summaryText = summarizeTokenRun(data.summary);
+        alert(`${data.message || 'Automated token generation finished.'}${summaryText ? `\n\n${summaryText}` : ''}`);
+      } catch (error) {
+        alert(error.message || 'Automated token generation failed.');
+      } finally {
+        autoTokenLoginBtn.disabled = false;
+        autoTokenLoginBtn.textContent = previousText;
+      }
+    }
+
+    if (autoTokenLoginBtn) {
+      autoTokenLoginBtn.addEventListener('click', () => {
+        runAutomatedTokenGeneration().catch((error) => {
+          alert(error.message || 'Automated token generation failed.');
+          autoTokenLoginBtn.disabled = false;
+          autoTokenLoginBtn.textContent = 'A';
+        });
+      });
+    }
+
+    async function updateShivTokenStatusBadge() {
+      if (!shivTokenStatusBadge) return;
+
+      try {
+        const resp = await fetch('/zerodha/kite/token-status?account=SHIV');
+        const data = await resp.json().catch(() => ({}));
+
+        if (!resp.ok || !data.success) {
+          throw new Error(data.message || 'Unable to fetch SHIV token status.');
+        }
+
+        shivTokenStatusBadge.classList.toggle('present', Boolean(data.present));
+        shivTokenStatusBadge.classList.toggle('missing', !data.present);
+        shivTokenStatusBadge.textContent = data.present ? 'token ready' : 'needs login';
+      } catch (error) {
+        shivTokenStatusBadge.classList.remove('present');
+        shivTokenStatusBadge.classList.add('missing');
+        shivTokenStatusBadge.textContent = 'error';
+      }
+    }
+
+    async function updateAngelConnectionStatus() {
+      if (!angelConnectionBadge) return;
+
+      try {
+        const resp = await fetch('/health/angel');
+        const data = await resp.json().catch(() => ({}));
+
+        const connected = Boolean(data?.connected);
+        angelConnectionBadge.classList.toggle('live', connected);
+        angelConnectionBadge.classList.toggle('offline', !connected);
+        angelConnectionBadge.textContent = connected ? 'live feed' : 'offline';
+
+        if (connected && data?.reconnectAttempts) {
+          angelConnectionBadge.title = `Live feed active • reconnects: ${Number(data.reconnectAttempts)}`;
+        } else if (connected) {
+          angelConnectionBadge.title = 'Live feed active';
+        } else {
+          angelConnectionBadge.title = 'Live feed offline';
+        }
+      } catch (error) {
+        angelConnectionBadge.classList.remove('live');
+        angelConnectionBadge.classList.add('offline');
+        angelConnectionBadge.textContent = 'offline';
+        angelConnectionBadge.title = 'Health endpoint unavailable';
+      }
+    }
+
+    async function generateShivTokenNow() {
+      if (!shivTokenBtn) return;
+
+      const previousText = shivTokenBtn.textContent;
+      shivTokenBtn.disabled = true;
+      shivTokenBtn.textContent = '...';
+
+      try {
+        const resp = await fetch('/zerodha/kite/generate-shiv-token?account=SHIV');
+        const data = await resp.json().catch(() => ({}));
+
+        if (!resp.ok) {
+          throw new Error(data.message || 'Unable to generate SHIV token.');
+        }
+
+        alert(data.message || 'SHIV token generated successfully.');
+        await updateShivTokenStatusBadge();
+      } catch (error) {
+        alert(error.message || 'Unable to generate SHIV token.');
+      } finally {
+        shivTokenBtn.disabled = false;
+        shivTokenBtn.textContent = previousText;
+      }
+    }
+
+    if (shivTokenBtn) {
+      shivTokenBtn.addEventListener('click', () => {
+        generateShivTokenNow().catch((error) => {
+          alert(error.message || 'Unable to generate SHIV token.');
+          shivTokenBtn.disabled = false;
+          shivTokenBtn.textContent = 'SHIV';
+        });
+      });
+    }
+
+    if (angelConnectionBadge) {
+      updateAngelConnectionStatus();
+      setInterval(updateAngelConnectionStatus, 10000);
+    }
+
+    function getTokenLoginAccounts() {
+      return availableDashboardAccounts.filter((accountId) => accountId && accountId !== 'ALL');
+    }
+
+    function renderTokenLoginAccounts() {
+      if (!tokenLoginAccount) return;
+
+      const accounts = getTokenLoginAccounts();
+      tokenLoginAccount.innerHTML = '';
+
+      accounts.forEach((accountId) => {
+        const option = document.createElement('option');
+        option.value = accountId;
+        option.textContent = accountId;
+        tokenLoginAccount.appendChild(option);
+      });
+
+      const preferredAccount = selectedDashboardAccount && selectedDashboardAccount !== 'ALL'
+        ? selectedDashboardAccount
+        : accounts[0];
+
+      if (preferredAccount) {
+        tokenLoginAccount.value = preferredAccount;
+      }
+    }
+
+    async function openTokenLoginModal() {
+      if (!tokenLoginModalBackdrop || !tokenLoginAccount) return;
+
+      if (!getTokenLoginAccounts().length) {
+        await loadDashboardAccounts();
+      }
+
+      renderTokenLoginAccounts();
+
+      if (!tokenLoginAccount.options.length) {
+        alert('No accounts are configured for token generation.');
+        return;
+      }
+
+      tokenLoginModalBackdrop.classList.add('show');
+      tokenLoginModalBackdrop.setAttribute('aria-hidden', 'false');
+      tokenLoginAccount.focus();
+    }
+
+    function closeTokenLoginModal() {
+      if (!tokenLoginModalBackdrop) return;
+      tokenLoginModalBackdrop.classList.remove('show');
+      tokenLoginModalBackdrop.setAttribute('aria-hidden', 'true');
+    }
+
+    async function continueTokenLogin() {
+      const normalizedAccountId = String(tokenLoginAccount?.value || '').trim().toUpperCase();
+
+      if (!normalizedAccountId) return;
+
+      const loginNonce = `${Date.now()}_${Math.random().toString(36).slice(2)}`;
+      const loginUrl = `/zerodha/kite/login?account=${encodeURIComponent(normalizedAccountId)}&nonce=${encodeURIComponent(loginNonce)}`;
+      tokenLoginContinue.disabled = true;
+
+      try {
+        const resp = await fetch(loginUrl);
+        const data = await resp.json().catch(() => ({}));
+
+        if (!resp.ok || !data.success) {
+          throw new Error(data.message || 'Unable to open Kite login browser.');
+        }
+
+        closeTokenLoginModal();
+        alert(`Temporary Kite login browser opened for ${normalizedAccountId}. Enter username, password, and TOTP in that window.`);
+      } catch (error) {
+        alert(error.message || 'Unable to open Kite login browser.');
+      } finally {
+        tokenLoginContinue.disabled = false;
+      }
+    }
+
+    if (manualTokenLoginBtn) {
+      manualTokenLoginBtn.addEventListener('click', () => {
+        openTokenLoginModal().catch(() => {
+          alert('Unable to load account list.');
+        });
+      });
+    }
+
+    [tokenLoginModalClose, tokenLoginCancel].forEach((button) => {
+      if (button) button.addEventListener('click', closeTokenLoginModal);
+    });
+
+    if (tokenLoginContinue) {
+      tokenLoginContinue.addEventListener('click', () => {
+        continueTokenLogin().catch((error) => {
+          alert(error.message || 'Unable to open Kite login browser.');
+          tokenLoginContinue.disabled = false;
+        });
+      });
+    }
+
+    if (tokenLoginModalBackdrop) {
+      tokenLoginModalBackdrop.addEventListener('click', (event) => {
+        if (event.target === tokenLoginModalBackdrop) {
+          closeTokenLoginModal();
+        }
+      });
+    }
+
+    function renderTradingStatus(trading) {
+      if (!tradingEnabledInput || !tradingSwitchState || !tradingSwitchNote) return;
+
+      tradingEnabledInput.checked = Boolean(trading?.enabled);
+      tradingEnabledInput.disabled = Boolean(trading?.dryRun);
+      tradingSwitchState.textContent = trading?.enabled ? 'ON' : 'OFF';
+
+      if (trading?.dryRun) {
+        tradingSwitchNote.textContent = 'DRY_RUN is enabled, so broker orders are blocked.';
+      } else if (trading?.enabled) {
+        tradingSwitchNote.textContent = 'TradingView signals can place broker orders.';
+      } else {
+        tradingSwitchNote.textContent = 'Signals are received but broker orders are blocked.';
+      }
+    }
+
+    async function loadTradingStatus() {
+      try {
+        const resp = await fetch('/trading/status');
+        if (!resp.ok) throw new Error('Unable to load trading status');
+        const data = await resp.json();
+        renderTradingStatus(data.trading);
+      } catch (e) {
+        if (tradingSwitchNote) {
+          tradingSwitchNote.textContent = 'Trading control API is unavailable.';
+        }
+      }
+    }
+
+    async function updateTradingStatus(enabled) {
+      if (!tradingEnabledInput) return;
+
+      tradingEnabledInput.disabled = true;
+
+      try {
+        const resp = await fetch('/trading/status', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ enabled })
+        });
+
+        if (!resp.ok) throw new Error('Unable to update trading status');
+
+        const data = await resp.json();
+        renderTradingStatus(data.trading);
+      } catch (e) {
+        tradingSwitchNote.textContent = e.message || 'Unable to update trading status.';
+        await loadTradingStatus();
+      } finally {
+        if (tradingEnabledInput && !tradingSwitchNote.textContent.includes('DRY_RUN')) {
+          tradingEnabledInput.disabled = false;
+        }
+      }
+    }
+
+    if (tradingEnabledInput) {
+      tradingEnabledInput.addEventListener('change', () => {
+        updateTradingStatus(tradingEnabledInput.checked);
+      });
+    }
+
+    function isToday(value) {
+      if (!value) return true;
+      const date = new Date(value);
+      const now = new Date();
+
+      return date.getFullYear() === now.getFullYear()
+        && date.getMonth() === now.getMonth()
+        && date.getDate() === now.getDate();
+    }
+
+    function getSignalAccount(payload) {
+      return payload?.signal?.AC
+        || payload?.signal?.accountId
+        || payload?.account_id
+        || payload?.accountId
+        || '';
+    }
+
+    function matchesSelectedAccount(accountId) {
+      return selectedDashboardAccount === 'ALL' || accountId === selectedDashboardAccount;
+    }
+
+    function renderManualExitAlerts() {
+      if (!manualExitAlerts || !manualExitList) return;
+
+      const alerts = [...manualExitAlertsByTradeId.values()]
+        .filter((alert) => matchesSelectedAccount(alert.accountId));
+
+      manualExitAlerts.classList.toggle('show', alerts.length > 0);
+      manualExitList.innerHTML = alerts.map((alert) => {
+        const symbol = `${alert.exchange || '-'}:${alert.tradingsymbol || '-'}`;
+        const side = String(alert.transactionType || '').toUpperCase() === 'BUY' ? 'SELL' : 'BUY';
+        return `
+          <div class="manual-exit-item">
+            <div class="manual-exit-main">${escapeHtml(alert.accountId)} · ${escapeHtml(symbol)} · Manual ${escapeHtml(side)} ${escapeHtml(alert.quantity || '-')}</div>
+            <div class="manual-exit-sub">${escapeHtml(alert.message || 'Automatic exit order failed. Please exit this position manually.')}</div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function upsertManualExitAlert(payload) {
+      if (!payload?.tradeId) return;
+      manualExitAlertsByTradeId.set(String(payload.tradeId), payload);
+      renderManualExitAlerts();
+    }
+
+    function clearManualExitAlert(payload) {
+      if (!payload?.tradeId) return;
+      manualExitAlertsByTradeId.delete(String(payload.tradeId));
+      renderManualExitAlerts();
+    }
+
+    async function loadManualExitAlerts() {
+      try {
+        const resp = await fetch(`/dashboard/manual-exit-alerts?account=${encodeURIComponent(selectedDashboardAccount)}`);
+        if (!resp.ok) throw new Error('Unable to load manual exit alerts');
+        const data = await resp.json();
+
+        manualExitAlertsByTradeId.clear();
+        (data.rows || []).forEach(upsertManualExitAlert);
+        renderManualExitAlerts();
+      } catch (e) {
+        renderManualExitAlerts();
+      }
+    }
+
+    function formatAmount(value) {
+      const number = Number(value);
+      if (!Number.isFinite(number)) return '-';
+
+      return number.toLocaleString('en-IN', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+      });
+    }
+
+    function updatePnlDisplay(value) {
+      if (!dashboardPnlValue) return;
+
+      const pnl = Number(value || 0);
+      dashboardPnlValue.textContent = formatAmount(pnl);
+      dashboardPnlValue.classList.toggle('pnl-positive', pnl > 0);
+      dashboardPnlValue.classList.toggle('pnl-negative', pnl < 0);
+    }
+
+    function renderDashboardSummary(summary) {
+      dashboardOrdersToday = Number(summary?.ordersToday || 0);
+
+      if (ordersTodayValue) ordersTodayValue.textContent = String(dashboardOrdersToday);
+      if (openPositionsValue) openPositionsValue.textContent = String(Number(summary?.openPositions || 0));
+      updatePnlDisplay(summary?.openPositionsPnl);
+
+      if (ordersTodayNote) {
+        ordersTodayNote.textContent = selectedDashboardAccount === 'ALL'
+          ? 'Signals counted across all accounts today.'
+          : `Signals counted for ${selectedDashboardAccount} today.`;
+      }
+
+      if (openPositionsNote) {
+        openPositionsNote.textContent = selectedDashboardAccount === 'ALL'
+          ? 'Broker open positions across all accounts.'
+          : `Broker open positions for ${selectedDashboardAccount}.`;
+      }
+
+      if (dashboardPnlNote) {
+        dashboardPnlNote.textContent = selectedDashboardAccount === 'ALL'
+          ? 'Open positions PnL across all accounts.'
+          : `Open positions PnL for ${selectedDashboardAccount}.`;
+      }
+
+      if (dashboardFilterNote) {
+        dashboardFilterNote.textContent = `Showing dashboard totals for ${selectedDashboardAccount}.`;
+      }
+    }
+
+    async function loadDashboardAccounts() {
+      if (!dashboardAccount) return;
+
+      try {
+        const resp = await fetch('/dashboard/accounts');
+        if (!resp.ok) throw new Error('Unable to load accounts');
+        const data = await resp.json();
+        const accounts = Array.isArray(data.accounts) && data.accounts.length ? data.accounts : ['ALL'];
+        availableDashboardAccounts = accounts;
+
+        dashboardAccount.innerHTML = '';
+
+        accounts.forEach((accountId) => {
+          const option = document.createElement('option');
+          option.value = accountId;
+          option.textContent = accountId;
+          dashboardAccount.appendChild(option);
+        });
+
+        dashboardAccount.value = selectedDashboardAccount;
+        renderTokenLoginAccounts();
+      } catch (e) {
+        if (dashboardFilterNote) {
+          dashboardFilterNote.textContent = 'Unable to load account list.';
+        }
+      }
+    }
+
+    async function fetchConfiguredAccountIds() {
+      const resp = await fetch('/dashboard/accounts');
+      if (!resp.ok) throw new Error('Unable to load accounts');
+
+      const data = await resp.json();
+      return (Array.isArray(data.accounts) ? data.accounts : [])
+        .map((accountId) => String(accountId || '').trim())
+        .filter((accountId) => accountId && accountId !== 'ALL');
+    }
+
+    function renderPayloadAccounts(accounts) {
+      const accountSelect = $('AC');
+      if (!accountSelect) return;
+
+      accountSelect.innerHTML = '';
+
+      if (!accounts.length) {
+        const option = document.createElement('option');
+        option.value = '';
+        option.textContent = 'No accounts configured';
+        accountSelect.appendChild(option);
+        defaultState.AC = '';
+        return;
+      }
+
+      accounts.forEach((accountId) => {
+        const option = document.createElement('option');
+        option.value = accountId;
+        option.textContent = accountId;
+        accountSelect.appendChild(option);
+      });
+
+      defaultState.AC = accounts.includes(defaultState.AC) ? defaultState.AC : accounts[0];
+      accountSelect.value = defaultState.AC;
+    }
+
+    async function loadPayloadAccounts() {
+      try {
+        renderPayloadAccounts(await fetchConfiguredAccountIds());
+      } catch (e) {
+        renderPayloadAccounts([]);
+        setStatus(e.message || 'Unable to load account list.', true);
+      }
+    }
+
+    async function loadDashboardSummary() {
+      try {
+        if (ordersTodayNote) ordersTodayNote.textContent = 'Loading orders...';
+        if (openPositionsNote) openPositionsNote.textContent = 'Loading broker positions...';
+
+        const resp = await fetch(`/dashboard/summary?account=${encodeURIComponent(selectedDashboardAccount)}`);
+        if (!resp.ok) throw new Error('Unable to load dashboard summary');
+        const data = await resp.json();
+
+        renderDashboardSummary(data);
+      } catch (e) {
+        if (ordersTodayNote) ordersTodayNote.textContent = e.message || 'Unable to load dashboard summary.';
+        if (openPositionsNote) openPositionsNote.textContent = 'Open positions could not be refreshed.';
+        if (dashboardPnlNote) dashboardPnlNote.textContent = 'PnL could not be refreshed.';
+      }
+    }
+
+    function connectDashboardSocket() {
+      if (!window.io) {
+        if (ordersTodayNote) ordersTodayNote.textContent = 'Socket client is unavailable.';
+        return;
+      }
+
+      const socket = window.io();
+
+      socket.on('order:new', (payload) => {
+        const accountId = getSignalAccount(payload);
+        const timestamp = payload?.timestamp || payload?.receivedAt;
+
+        if (!matchesSelectedAccount(accountId) || !isToday(timestamp)) return;
+
+        dashboardOrdersToday += 1;
+        if (ordersTodayValue) ordersTodayValue.textContent = String(dashboardOrdersToday);
+      });
+
+      socket.on('order:update', () => {
+        loadDashboardSummary();
+        loadManualExitAlerts();
+      });
+
+      socket.on('exit:manual_required', (payload) => {
+        upsertManualExitAlert(payload);
+        loadDashboardSummary();
+      });
+
+      socket.on('exit:manual_cleared', (payload) => {
+        clearManualExitAlert(payload);
+        loadDashboardSummary();
+      });
+    }
+
+    if (dashboardAccount) {
+      dashboardAccount.addEventListener('change', () => {
+        selectedDashboardAccount = dashboardAccount.value || 'ALL';
+        loadDashboardSummary();
+        loadManualExitAlerts();
+      });
+    }
+
+    function formatTime(value) {
+      if (!value) return '-';
+      const date = new Date(value);
+      if (Number.isNaN(date.getTime())) return '-';
+
+      return date.toLocaleTimeString([], {
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit'
+      });
+    }
+
+    function escapeHtml(value) {
+      return String(value ?? '-')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+
+    function closeDetailModal() {
+      if (!detailModalBackdrop) return;
+      detailModalBackdrop.classList.remove('show');
+      detailModalBackdrop.setAttribute('aria-hidden', 'true');
+    }
+
+    function openDetailModal(title, priceLabel, showStatus=false, showLtp=false, showPnl=false) {
+      if (!detailModalBackdrop || !detailModalTitle || !detailModalSubtitle || !detailModalBody) return;
+
+      detailModalTitle.textContent = title;
+      detailModalSubtitle.textContent = `${selectedDashboardAccount} · Today only`;
+      detailModalBody.innerHTML = `<div class="empty-state">Loading ${title.toLowerCase()}...</div>`;
+      detailModalBackdrop.classList.add('show');
+      detailModalBackdrop.setAttribute('aria-hidden', 'false');
+      detailModalBody.dataset.priceLabel = priceLabel;
+      detailModalBody.dataset.showStatus = String(showStatus);
+      detailModalBody.dataset.showLtp = String(showLtp);
+      detailModalBody.dataset.showPnl = String(showPnl);
+    }
+
+    function renderDetailRows(rows, priceLabel, showStatus=false, showLtp=false, showPnl=false) {
+      if (!detailModalBody) return;
+
+      if (!rows.length) {
+        detailModalBody.innerHTML = '<div class="empty-state">No records found for today.</div>';
+        return;
+      }
+
+      detailModalBody.innerHTML = `
+        <table class="detail-table">
+          <thead>
+            <tr>
+              <th>Account ID</th>
+              <th>Time</th>
+              <th>Symbol</th>
+              <th>Quantity</th>
+              <th>${escapeHtml(priceLabel)}</th>
+              ${showLtp ? '<th>LTP</th>' : ''}
+              ${showPnl ? '<th>PnL</th>' : ''}
+              ${showStatus ? '<th>Status</th>' : ''}
+            </tr>
+          </thead>
+          <tbody>
+            ${rows.map((row) => `
+              <tr>
+                <td>${escapeHtml(row.accountId)}</td>
+                <td>${escapeHtml(formatTime(row.time))}</td>
+                <td>${escapeHtml(row.symbol)}</td>
+                <td>${escapeHtml(row.quantity)}</td>
+                <td>${escapeHtml(row.price)}</td>
+                ${showLtp ? `<td>${escapeHtml(formatAmount(row.ltp))}</td>` : ''}
+                ${showPnl ? `<td>${escapeHtml(formatAmount(row.pnl))}</td>` : ''}
+                ${showStatus ? `<td>${escapeHtml(row.status)}</td>` : ''}
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      `;
+    }
+
+    async function showDashboardDetails(type) {
+      const isOrders = type === 'orders';
+      const title = isOrders ? 'Orders Today' : 'Open Positions';
+      const priceLabel = isOrders ? 'Order Price' : 'Entry Price';
+      const endpoint = isOrders ? '/dashboard/orders/today' : '/dashboard/positions/today';
+      const showStatus = isOrders;
+      const showLtp = !isOrders;
+      const showPnl = !isOrders;
+
+      openDetailModal(title, priceLabel, showStatus, showLtp, showPnl);
+
+      try {
+        const resp = await fetch(`${endpoint}?account=${encodeURIComponent(selectedDashboardAccount)}`);
+        if (!resp.ok) throw new Error(`Unable to load ${title.toLowerCase()}`);
+        const data = await resp.json();
+        renderDetailRows(Array.isArray(data.rows) ? data.rows : [], priceLabel, showStatus, showLtp, showPnl);
+      } catch (e) {
+        if (detailModalBody) {
+          detailModalBody.innerHTML = `<div class="empty-state">${escapeHtml(e.message || 'Unable to load details.')}</div>`;
+        }
+      }
+    }
+
+    function bindMetricCard(card, type) {
+      if (!card) return;
+
+      card.addEventListener('click', () => showDashboardDetails(type));
+      card.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          showDashboardDetails(type);
+        }
+      });
+    }
+
+    bindMetricCard(ordersTodayCard, 'orders');
+    bindMetricCard(openPositionsCard, 'positions');
+
+    if (detailModalClose) {
+      detailModalClose.addEventListener('click', closeDetailModal);
+    }
+
+    if (detailModalBackdrop) {
+      detailModalBackdrop.addEventListener('click', (event) => {
+        if (event.target === detailModalBackdrop) {
+          closeDetailModal();
+        }
+      });
+    }
+
+    document.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape') {
+        closeDetailModal();
+        closeTokenLoginModal();
+      }
+    });
+
+    const defaultState = {
+      instrument_type: '',
+      TT: 'BUY',
+      E: 'NSE',
+      TS: '',
+      Q: 1,
+      OT: 'LIMIT',
+      P: 'CNC',
+      VL: 'DAY',
+      AC: '',
+      PR: '',
+      extraJson: ''
+    };
+
+    function setStatus(msg, isErr=false) {
+      $('status').textContent = msg;
+      $('status').style.color = isErr ? '#f87171' : '#a8a8a8';
+    }
+
+    function normalizeNumber(v) {
+      if (v === '' || v === null || v === undefined) return undefined;
+      const n = Number(v);
+      return Number.isFinite(n) ? n : undefined;
+    }
+
+    function buildSignal() {
+      const signal = {
+        TT: String($('TT').value || '').trim(),
+        E: String($('E').value || '').trim(),
+        TS: String($('TS').value || '').trim(),
+        instrument_type: String($('instrument_type')?.value || '').trim(),
+
+        Q: String($('Q').value || '').trim(),
+        OT: String($('OT').value || '').trim(),
+        P: String($('P').value || '').trim(),
+        VL: String($('VL').value || '').trim(),
+        AC: String($('AC').value || '').trim(),
+      };
+
+      const PR = $('PR').value;
+      const prNum = normalizeNumber(PR);
+      if (prNum !== undefined) signal.PR = prNum;
+
+      const tpNum = normalizeNumber($('TP')?.value);
+      const slNum = normalizeNumber($('SL')?.value);
+      if (tpNum !== undefined) signal.TP = tpNum;
+      if (slNum !== undefined) signal.SL = slNum;
+
+      return signal;
+
+    }
+
+    function validate(signal) {
+      const required = ['TT','TS','Q','OT','P','VL','AC','E'];
+      for (const k of required) {
+        if (!String(signal[k] ?? '').trim()) {
+          throw new Error(k + ' is required');
+        }
+      }
+    }
+
+    function buildPayload() {
+      const signal = buildSignal();
+      validate(signal);
+      // Backend expects Q as string in your example.
+      signal.Q = String(signal.Q);
+      return [signal];
+    }
+
+    let abortController = null;
+
+    // Autocomplete
+    const tsList = $('tsList');
+    let tsAbort = null;
+    let lastReqId = 0;
+
+    function renderTsList(items) {
+      tsList.innerHTML = '';
+      if (!items || !items.length) {
+        const div = document.createElement('div');
+        div.className = 'autocomplete-item';
+        div.innerHTML = '<div class="main">No matches</div>';
+        tsList.appendChild(div);
+        tsList.classList.add('show');
+        return;
+      }
+
+      for (const it of items) {
+        const el = document.createElement('div');
+        el.className = 'autocomplete-item';
+        el.innerHTML = `
+          <div class="main">${it.tradingsymbol}</div>
+          <div class="sub">${it.instrument_type || '-'} • ${it.segment || '-'} • ${it.exchange || '-'}</div>
+        `;
+        el.addEventListener('click', () => {
+          $('TS').value = it.tradingsymbol;
+          tsList.classList.remove('show');
+          setStatus('Selected: ' + it.tradingsymbol);
+        });
+        tsList.appendChild(el);
+      }
+
+      tsList.classList.add('show');
+    }
+
+    async function fetchSymbols(term) {
+      const base = window.location.origin;
+      const instrument_type = String($('instrument_type').value || '');
+      const exchange = String($('E').value || '');
+      const url = `${base}/instruments/search?instrument_type=${encodeURIComponent(instrument_type)}&exchange=${encodeURIComponent(exchange)}&query=${encodeURIComponent(term)}`;
+
+
+      if (tsAbort) tsAbort.abort();
+      tsAbort = new AbortController();
+      const reqId = ++lastReqId;
+
+      const resp = await fetch(url, { signal: tsAbort.signal });
+      const txt = await resp.text();
+      let data = null;
+      try { data = JSON.parse(txt); } catch(_){ data = null; }
+
+      if (reqId !== lastReqId) return;
+      if (!resp.ok) {
+        setStatus('Symbol search failed', true);
+        return;
+      }
+
+      renderTsList((data && data.data) ? data.data : []);
+    }
+
+    let tsTimer = null;
+    $('TS').addEventListener('input', () => {
+      const term = String($('TS').value || '').trim();
+      clearTimeout(tsTimer);
+
+      if (term.length < 2) {
+        tsList.classList.remove('show');
+        return;
+      }
+
+      tsTimer = setTimeout(() => {
+        fetchSymbols(term).catch(() => {});
+      }, 250);
+    });
+
+    document.addEventListener('click', (e) => {
+      if (!e.target.closest('.autocomplete-wrap')) {
+        tsList.classList.remove('show');
+      }
+    });
+
+    // Buttons
+    $('buildBtn').addEventListener('click', () => {
+      try {
+        const payload = buildPayload();
+        $('payloadOut').value = JSON.stringify(payload, null, 2);
+        setStatus('Payload built successfully.', false);
+      } catch (e) {
+        setStatus(e.message, true);
+      }
+    });
+
+    $('copyBtn').addEventListener('click', async () => {
+      try {
+        const txt = $('payloadOut').value || '';
+        if (!txt) throw new Error('Build payload first');
+        await navigator.clipboard.writeText(txt);
+        setStatus('Copied JSON to clipboard.', false);
+      } catch (e) {
+        setStatus(e.message, true);
+      }
+    });
+
+    $('clearBtn').addEventListener('click', () => {
+      $('instrument_type').value = defaultState.instrument_type;
+      $('TT').value = defaultState.TT;
+      $('E').value = defaultState.E;
+      $('TS').value = defaultState.TS;
+      $('Q').value = defaultState.Q;
+      $('OT').value = defaultState.OT;
+      $('P').value = defaultState.P;
+      $('VL').value = defaultState.VL;
+      $('AC').value = defaultState.AC;
+      $('PR').value = defaultState.PR;
+      
+
+
+      $('payloadOut').value = '';
+
+      tsList.classList.remove('show');
+      setStatus('Cleared.', false);
+    });
+
+    $('toggleWebhookBtn').addEventListener('click', () => {
+      const box = $('webhookBox');
+      const tri = $('webhookTriangle');
+      const isOpen = box.style.display !== 'none';
+      box.style.display = isOpen ? 'none' : 'block';
+      tri.textContent = isOpen ? '▶' : '▼';
+    });
+
+    $('sendBtn').addEventListener('click', async () => {
+
+      const url = String($('webhookUrl').value || '').trim();
+      const bodyTxt = $('payloadOut').value;
+      if (!url) return setStatus('Webhook URL is required.', true);
+      if (!bodyTxt) return setStatus('Build payload first.', true);
+
+      try {
+        abortController = new AbortController();
+        setStatus('Sending...');
+
+        const payload = JSON.parse(bodyTxt);
+
+        const resp = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+          signal: abortController.signal
+        });
+
+        const respText = await resp.text();
+        let respJson = null;
+        try { respJson = JSON.parse(respText); } catch(_) {}
+
+        if (!resp.ok) {
+          throw new Error('HTTP ' + resp.status + (respJson && respJson.message ? ': ' + respJson.message : ''));
+        }
+
+        setStatus('Sent successfully.');
+        $('payloadOut').value = JSON.stringify(payload, null, 2) + '\n\n// Server response (text):\n' + respText;
+      } catch (e) {
+        const msg = (e && e.name === 'AbortError') ? 'Send cancelled.' : (e.message || String(e));
+        setStatus(msg, true);
+      } finally {
+        abortController = null;
+      }
+    });
+
+    $('abortBtn').addEventListener('click', () => {
+      if (abortController) abortController.abort();
+    });
+
+    async function initializePage() {
+      $('instrument_type').value = defaultState.instrument_type;
+      $('TT').value = defaultState.TT;
+      $('E').value = defaultState.E;
+      $('TS').value = defaultState.TS;
+      $('Q').value = defaultState.Q;
+      $('OT').value = defaultState.OT;
+      $('P').value = defaultState.P;
+      $('VL').value = defaultState.VL;
+      $('PR').value = '';
+
+      await loadPayloadAccounts();
+
+      loadTradingStatus();
+      loadDashboardAccounts();
+      loadDashboardSummary();
+      loadManualExitAlerts();
+      connectDashboardSocket();
+
+      $('buildBtn').click();
+    }
+
+    initializePage();
+
+const refreshLtpBtn =
+    document.getElementById(
+        'refreshLtpBtn'
+    );
+
+if (refreshLtpBtn) {
+
+    refreshLtpBtn.addEventListener(
+        'click',
+
+        async () => {
+
+            try {
+
+                refreshLtpBtn.disabled = true;
+
+                refreshLtpBtn.textContent =
+                    '⏳';
+
+                const response =
+                    await fetch(
+
+                        '/api/websocket/restart',
+
+                        {
+                            method: 'POST'
+                        }
+                    );
+
+                const result =
+                    await response.json();
+
+                if (!response.ok) {
+
+                    throw new Error(
+
+                        result.error ||
+
+                        'Failed to refresh'
+                    );
+                }
+
+                setStatus(
+                    'LTP refresh started'
+                );
+
+            } catch (err) {
+
+                setStatus(
+                    err.message,
+                    true
+                );
+
+            } finally {
+
+                refreshLtpBtn.disabled =
+                    false;
+
+                refreshLtpBtn.textContent =
+                    '🔄';
+            }
+        }
+    );
+}
+  </script>
+</body>
+</html>
+
