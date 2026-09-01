@@ -192,7 +192,7 @@ class ZerodhaLoginService {
 
             browser = await puppeteer.launch({
                 executablePath: await this.getChromeExecutablePath(),
-                headless: false,
+                headless: true,
                 userDataDir,
                 args: [
                     '--no-sandbox',
