@@ -308,9 +308,19 @@ if (!normalizedSignal.AC) {
             : null;
 
         const instrument = await this.getInstrument(normalizedSignal.TS, exchange);
+        const fallbackInstrument = instrument || {
+            exchange: exchange || 'NSE',
+            tradingsymbol: normalizedSignal.TS,
+            exchange_token: null,
+            instrument_token: null,
+            lot_size: null,
+            instrument_type: null,
+            segment: null,
+            source: 'signal-fallback'
+        };
 
         if (!instrument) {
-            throw new Error(`Instrument not found for symbol ${normalizedSignal.TS} and exchange ${exchange || 'NSE'}. Update the local instrument snapshot in data/instruments.csv.`);
+            console.warn(`[INSTRUMENT] Falling back to raw symbol payload for ${normalizedSignal.TS} on ${exchange || 'NSE'} because the local instrument snapshot is missing.`);
         }
 
         const quantityData = await this.calculateQuantity(
@@ -322,12 +332,12 @@ if (!normalizedSignal.AC) {
 return {
     accountId: normalizedSignal.AC,
 
-    exchange: instrument.exchange,
-    tradingsymbol: resolveBrokerTradingsymbol(normalizedSignal.TS, instrument),
-    exchangeToken: instrument.exchange_token ?? null,
-    instrumentToken: instrument.instrument_token ?? null,
+    exchange: fallbackInstrument.exchange,
+    tradingsymbol: resolveBrokerTradingsymbol(normalizedSignal.TS, fallbackInstrument),
+    exchangeToken: fallbackInstrument.exchange_token ?? null,
+    instrumentToken: fallbackInstrument.instrument_token ?? null,
     transaction_type: String(normalizedSignal.TT).toUpperCase(),
-    quantity: quantityData.quantity,
+    quantity: quantityData.quantity || Number(normalizedSignal.Q),
     order_type: normalizedSignal.OT || 'MARKET',
     product: normalizeBrokerProduct(normalizedSignal.P, 'NRML'),
     validity: normalizedSignal.VL || 'DAY',

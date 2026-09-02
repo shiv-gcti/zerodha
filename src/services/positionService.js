@@ -307,28 +307,34 @@ class PositionService {
         const fields = [];
         const params = [];
 
+        const normalizeSqliteValue = (value) => {
+            if (typeof value === 'boolean') return value ? 1 : 0;
+            if (value === null || value === undefined) return null;
+            return value;
+        };
+
         if (updates.managed !== undefined) {
-            params.push(updates.managed);
+            params.push(normalizeSqliteValue(updates.managed));
             fields.push(`managed = $${params.length}`);
         }
 
         if (updates.lifecycleStatus !== undefined) {
-            params.push(updates.lifecycleStatus);
+            params.push(normalizeSqliteValue(updates.lifecycleStatus));
             fields.push(`lifecycle_status = $${params.length}`);
         }
 
         if (updates.closedReason !== undefined) {
-            params.push(updates.closedReason);
+            params.push(normalizeSqliteValue(updates.closedReason));
             fields.push(`closed_reason = $${params.length}`);
         }
 
         if (updates.lastError !== undefined) {
-            params.push(updates.lastError);
+            params.push(normalizeSqliteValue(updates.lastError));
             fields.push(`last_error = $${params.length}`);
         }
 
         if (updates.exitPlaceCooldownUntil !== undefined) {
-            params.push(updates.exitPlaceCooldownUntil);
+            params.push(normalizeSqliteValue(updates.exitPlaceCooldownUntil));
             fields.push(`exit_place_cooldown_until = $${params.length}`);
         }
 

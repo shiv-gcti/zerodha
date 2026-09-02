@@ -9,6 +9,7 @@ import dbService from '../src/services/dbService.js';
 import { ACCOUNTS } from '../src/config/accounts.js';
 import { needsInstrumentSync, instrumentCsvNeedsRefresh } from '../src/jobs/instrumentSyncJob.js';
 import tradeLifecycleService from '../src/services/tradeLifecycleService.js';
+import instrumentService from '../src/services/instrumentService.js';
 import { checkAndHandleReversal } from '../src/services/orderService.js';
 
 test('normalizes common order products for broker payloads', () => {
@@ -189,6 +190,71 @@ test('skips reversal handling when the opposite trade is already closed by TP/SL
     }, accountId);
 
     assert.equal(result, null);
+});
+
+test('allows MCX signals to build a broker payload even without a local instrument snapshot entry', async () => {
+    const signal = {
+        AC: 'SHIV',
+        TT: 'BUY',
+        E: 'MCX',
+        TS: 'CRUDEOIL',
+        Q: '1',
+        OT: 'MARKET',
+        P: 'MIS',
+        VL: 'DAY'
+    };
+
+    const payload = await instrumentService.buildOrder(signal);
+
+    assert.equal(payload.accountId, 'SHIV');
+    assert.equal(payload.exchange, 'MCX');
+    assert.equal(payload.tradingsymbol, 'CRUDEOIL');
+    assert.equal(payload.transaction_type, 'BUY');
+    assert.equal(payload.quantity, 1);
+});
+
+test('updates lifecycle managed state with SQLite-safe boolean values', async () => {
+    await dbService.query(`
+        INSERT INTO trade_positions
+        (
+            account_id,
+            tradingsymbol,
+            exchange,
+            transaction_type,
+            product,
+            quantity,
+            status
+        )
+        VALUES
+        ($1, $2, $3, $4, $5, $6, 'OPEN')
+    `, ['LIFECYCLE_BOOL_TEST', 'BOOL_TEST', 'NSE', 'BUY', 'CNC', 1]);
+
+    const row = await dbService.query(`
+        SELECT id
+        FROM trade_positions
+        WHERE account_id = $1
+        ORDER BY id DESC
+        LIMIT 1
+    `, ['LIFECYCLE_BOOL_TEST']);
+
+    const positionId = row.rows[0].id;
+
+    await dbService.query(`
+        UPDATE trade_positions
+        SET managed = $1,
+            lifecycle_status = $2,
+            updated_at = NOW()
+        WHERE id = $3
+    `, [1, 'ENTRY_PENDING', positionId]);
+
+    const result = await dbService.query(`
+        SELECT managed, lifecycle_status
+        FROM trade_positions
+        WHERE id = $1
+    `, [positionId]);
+
+    assert.equal(result.rows[0].managed, 1);
+    assert.equal(result.rows[0].lifecycle_status, 'ENTRY_PENDING');
 });
 
 test('detects when the local instrument cache is empty', async () => {
