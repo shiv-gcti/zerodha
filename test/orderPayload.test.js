@@ -8,6 +8,8 @@ import loginService from '../src/services/loginService.js';
 import dbService from '../src/services/dbService.js';
 import { ACCOUNTS } from '../src/config/accounts.js';
 import { needsInstrumentSync, instrumentCsvNeedsRefresh } from '../src/jobs/instrumentSyncJob.js';
+import tradeLifecycleService from '../src/services/tradeLifecycleService.js';
+import { checkAndHandleReversal } from '../src/services/orderService.js';
 
 test('normalizes common order products for broker payloads', () => {
     assert.equal(normalizeBrokerProduct('mis'), 'MIS');
@@ -122,6 +124,71 @@ test('supports SQLite-friendly IN array filters in local queries', async () => {
     const found = result.rows.find(row => row.name === symbolName);
     assert.ok(found, 'Unique ANY query should match inserted record');
     assert.equal(found.ltp, 2450);
+});
+
+test('stores a unique signal lifecycle id before the entry order is placed', async () => {
+    const signal = {
+        AC: 'TEST_SIGNAL_ACCOUNT',
+        TS: 'RELIANCE',
+        E: 'NSE',
+        TT: 'BUY',
+        exchange: 'NSE',
+        symbol: 'RELIANCE',
+        action: 'BUY',
+        quantity: 1,
+        product: 'CNC'
+    };
+
+    const result = await tradeLifecycleService.createSignalLifecycle(signal, signal.AC);
+
+    assert.equal(typeof result.signalId, 'string');
+    assert.ok(result.signalId.length > 0);
+
+    const rows = await dbService.query(`
+        SELECT *
+        FROM trade_lifecycle_events
+        WHERE order_id = $1
+          AND event_type = 'SIGNAL_RECEIVED'
+    `, [result.signalId]);
+
+    assert.equal(rows.rowCount, 1);
+    assert.equal(rows.rows[0].account_id, signal.AC);
+});
+
+test('skips reversal handling when the opposite trade is already closed by TP/SL', async () => {
+    const accountId = 'REVERSAL_CLOSED_TEST';
+    const symbol = 'TCS';
+
+    await dbService.query(`
+        INSERT INTO trade_positions
+        (
+            account_id,
+            tradingsymbol,
+            exchange,
+            transaction_type,
+            product,
+            quantity,
+            entry_order_id,
+            status,
+            lifecycle_status,
+            entry_price,
+            target_order_id,
+            stoploss_order_id,
+            target_price,
+            stoploss_price
+        )
+        VALUES
+        ($1, $2, 'NSE', 'BUY', 'CNC', 1, 'ENTRY-REV-CLOSED', 'CLOSED', 'TARGET_HIT', 101, 'TARGET-REV-CLOSED', 'STOP-REV-CLOSED', 105, 98)
+    `, [accountId, symbol]);
+
+    const result = await checkAndHandleReversal({
+        AC: accountId,
+        TS: symbol,
+        E: 'NSE',
+        TT: 'SELL'
+    }, accountId);
+
+    assert.equal(result, null);
 });
 
 test('detects when the local instrument cache is empty', async () => {

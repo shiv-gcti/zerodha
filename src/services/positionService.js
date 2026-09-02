@@ -17,6 +17,7 @@ class PositionService {
             INSERT INTO trade_positions
             (
                 account_id,
+                signal_id,
                 tradingsymbol,
                 exchange,
                 transaction_type,
@@ -29,11 +30,12 @@ class PositionService {
                 exchange_token
             )
             VALUES
-            ($1,$2,$3,$4,$5,$6,$7,$8,$9,'OPEN',$10)
+            ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,'OPEN',$11)
             RETURNING *
             `,
             [
                 orderPayload.accountId,
+                orderPayload.signalId || null,
                 orderPayload.tradingsymbol,
                 orderPayload.exchange,
                 orderPayload.transaction_type,
@@ -421,6 +423,7 @@ class PositionService {
               AND exchange = $3
               AND transaction_type = $4
               AND status IN ('OPEN', 'ACTIVE')
+              AND lifecycle_status NOT IN ('CLOSED', 'TARGET_HIT', 'STOPLOSS_HIT', 'REVERSAL_CLOSED', 'MANUAL_EXIT_REQUIRED')
             LIMIT 1
             `,
             [accountId, symbol, exchange, oppositeType]

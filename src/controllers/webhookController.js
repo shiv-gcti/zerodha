@@ -6,6 +6,7 @@ import {
 
 import { getIO } from '../socket/socketServer.js';
 import duplicateSignalService from '../services/duplicateSignalService.js';
+import tradeLifecycleService from '../services/tradeLifecycleService.js';
 
 function classifyWebhookError(error) {
     const message = String(error?.message || error);
@@ -45,7 +46,10 @@ export const receiveSignal = async (req, res) => {
         console.log('BODY:', JSON.stringify(req.body, null, 2));
 
         const signal = Array.isArray(req.body) ? req.body[0] : req.body;
+        const accountId = signal.AC || signal.account || 'UNKNOWN';
 
+        const signalLifecycle = await tradeLifecycleService.createSignalLifecycle(signal, accountId);
+        signal.signalId = signalLifecycle.signalId;
 
         console.log('SIGNAL:', signal);
 
@@ -85,7 +89,6 @@ export const receiveSignal = async (req, res) => {
         // ============================
         // 🔄 SIGNAL REVERSAL CHECK
         // ============================
-        const accountId = signal.AC || signal.account;
         const reversalResult = await checkAndHandleReversal(signal, accountId);
         
         if (reversalResult) {

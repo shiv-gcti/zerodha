@@ -61,6 +61,7 @@ function makeCoreSchema() {
         CREATE TABLE IF NOT EXISTS trade_positions (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             account_id TEXT NOT NULL,
+            signal_id TEXT,
             tradingsymbol TEXT NOT NULL,
             exchange TEXT NOT NULL,
             transaction_type TEXT NOT NULL,

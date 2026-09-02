@@ -1,3 +1,4 @@
+import crypto from 'crypto';
 import db from './dbService.js';
 
 const ensureColumnIfMissing = async (tableName, columnName, columnDefinition) => {
@@ -11,6 +12,53 @@ const ensureColumnIfMissing = async (tableName, columnName, columnDefinition) =>
 class TradeLifecycleService {
     constructor() {
         this.schemaReady = false;
+    }
+
+    generateSignalId(signal, accountId = 'UNKNOWN') {
+        const normalized = {
+            accountId: accountId || 'UNKNOWN',
+            action: signal?.TT || signal?.action || '',
+            symbol: signal?.TS || signal?.symbol || '',
+            exchange: signal?.E || signal?.exchange || '',
+            quantity: signal?.Q ?? signal?.quantity ?? '',
+            timestamp: Date.now()
+        };
+
+        return `SIG-${crypto.createHash('sha256')
+            .update(JSON.stringify(normalized))
+            .digest('hex')
+            .slice(0, 20)}`;
+    }
+
+    async createSignalLifecycle(signal, accountId = 'UNKNOWN') {
+        await this.ensureSchema();
+
+        const resolvedAccountId = accountId || signal?.AC || signal?.account || 'UNKNOWN';
+        const signalId = this.generateSignalId(signal, resolvedAccountId);
+
+        await db.query(
+            `
+            INSERT OR IGNORE INTO trade_lifecycle_events
+            (trade_id, account_id, event_type, order_id, payload)
+            VALUES (?, ?, ?, ?, ?)
+            `,
+            [
+                null,
+                resolvedAccountId,
+                'SIGNAL_RECEIVED',
+                signalId,
+                JSON.stringify({
+                    signalId,
+                    receivedAt: new Date().toISOString(),
+                    signal: signal || {}
+                })
+            ]
+        );
+
+        return {
+            signalId,
+            accountId: resolvedAccountId
+        };
     }
 
     async ensureSchema() {
@@ -28,6 +76,7 @@ class TradeLifecycleService {
             );
         `);
 
+        await ensureColumnIfMissing('trade_positions', 'signal_id', 'signal_id TEXT');
         await ensureColumnIfMissing('trade_positions', 'managed', 'managed INTEGER NOT NULL DEFAULT 0');
         await ensureColumnIfMissing('trade_positions', 'product', "product TEXT NOT NULL DEFAULT 'CNC'");
         await ensureColumnIfMissing('trade_positions', 'lifecycle_status', "lifecycle_status TEXT NOT NULL DEFAULT 'ENTRY_PENDING'");
