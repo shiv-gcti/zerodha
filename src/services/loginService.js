@@ -301,7 +301,7 @@ class ZerodhaLoginService {
         logger.info(`Starting Zerodha automated login loop for account ID: "${account.id}"...`);
         
         const isProduction = (process.env.NODE_ENV === 'production' || process.env.RENDER) && process.platform !== 'win32';
-        const headless = options.headless ?? (isProduction ? chromium.headless : false);
+        const headless = options.headless ?? (isProduction ? chromium.headless : true);
         
         const launchOptions = {
             executablePath: await this.getChromeExecutablePath(),

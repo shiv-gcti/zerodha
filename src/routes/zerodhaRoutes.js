@@ -205,7 +205,7 @@ router.get('/kite/generate-shiv-token', async (req, res) => {
     }
 
     try {
-        const session = await loginService.login(account, { headless: false });
+        const session = await loginService.login(account, { headless: true });
         const tokenRecord = await tokenManager.getTokenRecord(account.id);
         const accessToken = tokenRecord?.access_token || session?.access_token || session?.data?.access_token;
 
