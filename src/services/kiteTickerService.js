@@ -10,6 +10,8 @@ class KiteTickerService {
         this.activeAccountId = null;
         this.tokenUpdatedAtByAccount = new Map();
         this.pendingReconnectAccountIds = new Set();
+        this.authRejectedAccountIds = new Set();
+        this.startingAccountIds = new Set();
         this.tokenMonitorTimer = null;
     }
 
@@ -36,6 +38,18 @@ class KiteTickerService {
     async startForAccount(account) {
         if (this.activeAccountId === account.id && this.tickers.has(account.id)) return;
 
+        if (this.startingAccountIds.has(account.id)) return;
+        this.startingAccountIds.add(account.id);
+
+        try {
+            await this.startForAccountInternal(account);
+        } finally {
+            this.startingAccountIds.delete(account.id);
+        }
+    }
+
+    async startForAccountInternal(account) {
+
         this.startTokenMonitor();
         await this.stopActiveTicker(account.id);
 
@@ -51,6 +65,7 @@ class KiteTickerService {
         }
         this.tokenUpdatedAtByAccount.set(account.id, tokenRecord.updated_at || null);
         this.pendingReconnectAccountIds.delete(account.id);
+        this.authRejectedAccountIds.delete(account.id);
 
         const ticker = new KiteTicker({
             api_key: account.apiKey,
@@ -113,8 +128,8 @@ class KiteTickerService {
             this.activeAccountId = null;
         }
         this.pendingReconnectAccountIds.add(account.id);
-
-        await this.refreshTickerIfTokenChanged(account.id, true);
+        this.authRejectedAccountIds.add(account.id);
+        console.warn(`[WS] ${account.id} ticker disabled until Zerodha token changes; REST fallback remains active.`);
     }
 
     startTokenMonitor() {
@@ -153,6 +168,10 @@ class KiteTickerService {
 
         if (!tokenRecord?.access_token) {
             if (forceLog) console.warn(`[WS] Token refresh check found no token for ${accountId}`);
+            return;
+        }
+
+        if (this.authRejectedAccountIds.has(accountId) && latestUpdatedAt === previousUpdatedAt) {
             return;
         }
 
