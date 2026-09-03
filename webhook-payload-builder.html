@@ -985,6 +985,11 @@
       });
     }
 
+    if (shivTokenStatusBadge) {
+      updateShivTokenStatusBadge();
+      setInterval(updateShivTokenStatusBadge, 10000);
+    }
+
     if (angelConnectionBadge) {
       updateAngelConnectionStatus();
       setInterval(updateAngelConnectionStatus, 10000);
