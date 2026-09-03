@@ -38,6 +38,26 @@ class TokenManager {
     constructor() {
         this.missingTokenRetryAt = new Map();
         this.missingTokenRetryMs = 60000;
+        this.loginInProgressByAccount = new Map();
+    }
+
+    async loginOnce(account, options = {}) {
+        const accountId = account.id;
+        const existingLogin = this.loginInProgressByAccount.get(accountId);
+        if (existingLogin) {
+            logger.warn(`Login already in progress for ${accountId}; waiting for the existing session.`);
+            return existingLogin;
+        }
+
+        const loginPromise = loginService.login(account, options)
+            .finally(() => {
+                if (this.loginInProgressByAccount.get(accountId) === loginPromise) {
+                    this.loginInProgressByAccount.delete(accountId);
+                }
+            });
+
+        this.loginInProgressByAccount.set(accountId, loginPromise);
+        return loginPromise;
     }
 
     async refreshAllTokens(options = {}) {
@@ -46,7 +66,7 @@ class TokenManager {
         for (const account of ACCOUNTS) {
             try {
                 logger.info(`Refreshing token for ${account.id}`);
-                await loginService.login(account, options);
+                await this.loginOnce(account, options);
                 logger.info(`Token verification workflow completed for ${account.id}`);
                 executionSummary[account.id] = { status: 'success' };
             } catch (err) {
@@ -109,7 +129,7 @@ class TokenManager {
 
         try {
             logger.info(`No local Zerodha token found for ${accountId}; attempting fresh login...`);
-            const session = await loginService.login(account, { headless: true });
+            const session = await this.loginOnce(account, { headless: true });
             const accessToken = session?.access_token || session?.data?.access_token;
             if (!accessToken) {
                 this.missingTokenRetryAt.set(accountId, Date.now() + this.missingTokenRetryMs);

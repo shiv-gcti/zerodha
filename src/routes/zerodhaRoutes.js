@@ -205,7 +205,7 @@ router.get('/kite/generate-shiv-token', async (req, res) => {
     }
 
     try {
-        const session = await loginService.login(account, { headless: true });
+        const session = await tokenManager.loginOnce(account, { headless: true });
         const tokenRecord = await tokenManager.getTokenRecord(account.id);
         const accessToken = tokenRecord?.access_token || session?.access_token || session?.data?.access_token;
 
@@ -287,7 +287,7 @@ router.get('/kite/callback', async (req, res) => {
         if (!accountId) {
             console.warn(`- Warning: State parameter is missing. Attempting fallback matching lookup...`);
             // If manual authorization has no state parameter, default cleanly to your primary profile configuration context
-            accountId = 'PM';
+            accountId = ACCOUNTS[0]?.id || null;
         }
         console.log(`- Final resolved Account ID routing context: ${accountId}`);
 
