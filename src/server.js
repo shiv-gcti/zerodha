@@ -22,6 +22,7 @@ import angelWebSocketService from "./services/angelWebSocketService.js";
 import { startAngelTokenJob } from "./jobs/angelTokenJob.js";
 import { startAngelInstrumentJob } from './jobs/angelInstrumentJob.js';
 import angelInstrumentService  from './services/angelInstrumentService.js';
+import tokenManager from './services/tokenManager.js';
 
 
 
@@ -585,6 +586,7 @@ function startServerLoop() {
 
     server.listen(3000, async () => {
         console.log('🚀 Server running on port 3000');
+        await tokenManager.ensureStartupTokens({ headless: true });
         await initializeAngelRuntime();
         setInterval(() => {
             if (!angelWebSocketService.isConnected) {

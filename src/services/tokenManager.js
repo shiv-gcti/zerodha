@@ -34,6 +34,29 @@ function writeTable(tableName, rows) {
     fs.writeFileSync(filePath, JSON.stringify(rows, null, 2), 'utf8');
 }
 
+function currentIstDate() {
+    return new Intl.DateTimeFormat('en-CA', {
+        timeZone: 'Asia/Kolkata',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit'
+    }).format(new Date());
+}
+
+function tokenIstDate(updatedAt) {
+    if (!updatedAt) return null;
+
+    const date = new Date(updatedAt);
+    if (Number.isNaN(date.getTime())) return null;
+
+    return new Intl.DateTimeFormat('en-CA', {
+        timeZone: 'Asia/Kolkata',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit'
+    }).format(date);
+}
+
 class TokenManager {
     constructor() {
         this.missingTokenRetryAt = new Map();
@@ -109,9 +132,37 @@ class TokenManager {
         return nextRecord;
     }
 
+    isTokenFreshForToday(record) {
+        return Boolean(record?.access_token) && tokenIstDate(record.updated_at) === currentIstDate();
+    }
+
+    async ensureStartupTokens(options = {}) {
+        const summary = {};
+
+        for (const account of ACCOUNTS) {
+            try {
+                const record = await this.getTokenRecord(account.id);
+                if (this.isTokenFreshForToday(record)) {
+                    logger.info(`Using existing Zerodha token for ${account.id}; token is current for today.`);
+                    summary[account.id] = { status: 'reused' };
+                    continue;
+                }
+
+                logger.info(`No current Zerodha token for ${account.id}; starting automatic login.`);
+                await this.loginOnce(account, options);
+                summary[account.id] = { status: 'refreshed' };
+            } catch (error) {
+                logger.error(`Startup token recovery failed for ${account.id}:`, error?.message || error);
+                summary[account.id] = { status: 'failed', error: error?.message || String(error) };
+            }
+        }
+
+        return summary;
+    }
+
     async getToken(accountId) {
         const existingRecord = await this.getTokenRecord(accountId);
-        if (existingRecord?.access_token) {
+        if (this.isTokenFreshForToday(existingRecord)) {
             return existingRecord.access_token;
         }
 
