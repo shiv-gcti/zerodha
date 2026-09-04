@@ -307,6 +307,10 @@ if (!normalizedSignal.AC) {
             ? String(normalizedSignal.E).trim().toUpperCase()
             : null;
 
+        if (exchange === 'MCX' && /[0-9]{2}(JAN|FEB|MAR|APR|MAY|JUN|JUL|AUG|SEP|OCT|NOV|DEC)FUT$/i.test(normalizedSignal.TS) === false) {
+            throw new Error(`Invalid MCX futures symbol ${normalizedSignal.TS}; use a valid month code such as FEB, NOV, or DEC.`);
+        }
+
         const instrument = await this.getInstrument(normalizedSignal.TS, exchange);
         const fallbackInstrument = instrument || {
             exchange: exchange || 'NSE',

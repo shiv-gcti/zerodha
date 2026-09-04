@@ -158,7 +158,11 @@ export const receiveSignal = async (req, res) => {
 
     } catch (error) {
 
-        console.error(error);
+        console.error('[WEBHOOK_ORDER_FAILED]', {
+            message: error?.message || String(error),
+            stack: error?.stack,
+            signal: req.body
+        });
 
         const classified = classifyWebhookError(error);
 

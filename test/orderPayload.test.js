@@ -197,7 +197,7 @@ test('allows MCX signals to build a broker payload even without a local instrume
         AC: 'SHIV',
         TT: 'BUY',
         E: 'MCX',
-        TS: 'CRUDEOIL',
+        TS: 'SILVERM27FEBFUT',
         Q: '1',
         OT: 'MARKET',
         P: 'MIS',
@@ -208,7 +208,7 @@ test('allows MCX signals to build a broker payload even without a local instrume
 
     assert.equal(payload.accountId, 'SHIV');
     assert.equal(payload.exchange, 'MCX');
-    assert.equal(payload.tradingsymbol, 'CRUDEOIL');
+    assert.equal(payload.tradingsymbol, 'SILVERM27FEBFUT');
     assert.equal(payload.transaction_type, 'BUY');
     assert.equal(payload.quantity, 1);
 });

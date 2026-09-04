@@ -57,6 +57,15 @@ function setOrderRequestCooldown(accountId) {
     return until;
 }
 
+function withTimeout(promise, timeoutMs, label) {
+    let timer;
+    const timeout = new Promise((resolve, reject) => {
+        timer = setTimeout(() => reject(new Error(`${label} timed out after ${timeoutMs}ms`)), timeoutMs);
+    });
+
+    return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
+}
+
 async function runOrderRequest(accountId, label, meta, fn) {
     const cooldownUntil = getCooldownUntil(accountId);
 
@@ -267,11 +276,27 @@ console.log(
         { variety, orderParams },
         async () => {
             try {
-                return await kc.placeOrder(
-                    variety,
-                    orderParams
+                const result = await withTimeout(
+                    kc.placeOrder(variety, orderParams),
+                    Number(process.env.KITE_ORDER_TIMEOUT_MS || 30000),
+                    'Kite order placement'
                 );
+                console.log('[KITE_ORDER_ACCEPTED]', {
+                    accountId,
+                    variety,
+                    orderId: result?.order_id || result?.orderId || null,
+                    exchange: orderParams.exchange,
+                    tradingsymbol: orderParams.tradingsymbol
+                });
+                return result;
             } catch (error) {
+                console.error('[KITE_ORDER_REJECTED]', {
+                    accountId,
+                    variety,
+                    exchange: orderParams.exchange,
+                    tradingsymbol: orderParams.tradingsymbol,
+                    error: describeKiteError(error)
+                });
                 if (isOrderRequestThrottle(error)) {
                     logOrderLimitDiagnosis({
                         accountId,
